@@ -15,7 +15,7 @@ export default function Home() {
   };
   
   const handleNewQuestion = () => {
-    setShowQuestionSelect(true);
+    setShowQuestionSelect(true)
   };
   
   return (
