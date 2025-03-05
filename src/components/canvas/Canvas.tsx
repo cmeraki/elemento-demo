@@ -5,8 +5,8 @@ import ColorPicker from './ColorPicker';
 import { Question } from '../../types';
 
 interface CanvasProps {
-  question: Question | null;
-  onNewQuestion: () => void;
+  question?: Question | null;
+  onNewQuestion?: () => void;
 }
 
 type DrawingTool = 'pen' | 'marker' | 'highlighter' | 'eraser';
@@ -344,7 +344,6 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
       <div 
         ref={containerRef}
         className="flex-grow relative overflow-hidden"
-        style={{ marginTop: question ? '120px' : '0' }}
       >
         <canvas
           ref={canvasRef}
@@ -360,9 +359,9 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
         />
       </div>
       
-      {/* Drawing Tools */}
-      <div className="bg-gray-100 border-t border-gray-200 p-2">
-        <div className="flex justify-between items-center">
+      {/* Drawing Tools - Floating bubble style */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+        <div className="bg-gray-100 bg-opacity-90 rounded-full shadow-lg py-2 px-4 flex items-center space-x-2">
           <DrawingTools 
             activeTool={drawingState.tool}
             onToolChange={handleToolChange}
@@ -373,21 +372,14 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
             canRedo={drawingState.redoStack.length > 0}
           />
           
+          <div className="border-r border-gray-300 h-8 mx-2"></div>
+          
           <ColorPicker 
             activeColor={drawingState.color}
             onColorChange={handleColorChange}
             strokeWidth={drawingState.width}
             onStrokeWidthChange={handleStrokeWidthChange}
           />
-          
-          {question ? (
-            <button
-              className="ml-4 bg-blue-500 text-white px-4 py-2 rounded-md"
-              onClick={onNewQuestion}
-            >
-              New Question
-            </button>
-          ) : null}
         </div>
       </div>
     </div>
