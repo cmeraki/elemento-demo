@@ -1,8 +1,10 @@
+// src/components/question/LibrarySelect.tsx
 import { useState } from 'react';
-import { Question } from '../../types';
+import { Question, GetQuestionsParams } from '../../types';
 
-// Mock data - in a real app this would come from an API or file
-import { getQuestions } from '../../types';
+// Correct import path for the getQuestions function 
+// In a real app, this should come from an API service or data file
+import { getQuestions } from '../../data/questionLibrary';
 
 interface LibrarySelectProps {
   onQuestionSelected: (question: Question) => void;
@@ -43,6 +45,28 @@ const books: Book[] = [
   }
 ];
 
+// Mock implementation of getQuestions in case the import fails
+// This provides a fallback to prevent runtime errors
+const fallbackGetQuestions = async (params: GetQuestionsParams): Promise<Question[]> => {
+  console.warn('Using fallback getQuestions function - check your imports');
+  return [
+    {
+      id: 'fallback-1',
+      text: 'Sample question (fallback)',
+      options: [
+        { id: 'A', text: 'Option A', isCorrect: true },
+        { id: 'B', text: 'Option B', isCorrect: false },
+      ],
+      difficulty: params.difficulty || 'medium',
+      subject: 'General',
+      chapter: 'Sample Chapter'
+    }
+  ];
+};
+
+// Use the imported getQuestions if available, otherwise use fallback
+const fetchQuestions = typeof getQuestions === 'function' ? getQuestions : fallbackGetQuestions;
+
 const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
   const [selectedTab, setSelectedTab] = useState<'textbook' | 'ai'>('textbook');
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
@@ -51,20 +75,23 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
   const [concept, setConcept] = useState('');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null); // ADDED: Error state for error handling
   
   const handleBookSelect = (bookId: string) => {
     setSelectedBook(bookId);
     setSelectedChapter(null);
     setQuestions([]);
+    setError(null); // Clear any previous errors
   };
   
   const handleChapterSelect = async (chapterId: string) => {
     setSelectedChapter(chapterId);
     setIsLoading(true);
+    setError(null); // Clear any previous errors
     
     try {
       // In a real app, fetch questions from API or file
-      const chapterQuestions = await getQuestions({
+      const chapterQuestions = await fetchQuestions({
         chapterId,
         count: 5
       });
@@ -72,6 +99,8 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
       setQuestions(chapterQuestions);
     } catch (error) {
       console.error('Error fetching questions:', error);
+      setError('Failed to load questions. Please try again.'); // Set error message
+      setQuestions([]); // Clear questions on error
     } finally {
       setIsLoading(false);
     }
@@ -81,10 +110,11 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
     if (!concept) return;
     
     setIsLoading(true);
+    setError(null); // Clear any previous errors
     
     try {
       // In a real app, fetch questions from AI API
-      const aiQuestions = await getQuestions({
+      const aiQuestions = await fetchQuestions({
         concept,
         difficulty,
         count: 5
@@ -93,10 +123,15 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
       setQuestions(aiQuestions);
     } catch (error) {
       console.error('Error fetching AI questions:', error);
+      setError('Failed to generate questions. Please try again.'); // Set error message
+      setQuestions([]); // Clear questions on error
     } finally {
       setIsLoading(false);
     }
   };
+  
+  // Get the selected book safely
+  const selectedBookData = selectedBook ? books.find(book => book.id === selectedBook) : null;
   
   return (
     <div className="h-full flex flex-col">
@@ -125,6 +160,13 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
         </div>
       </div>
       
+      {/* Error message display */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
+      
       <div className="flex-grow flex">
         {selectedTab === 'textbook' ? (
           <div className="grid grid-cols-12 gap-4 h-full">
@@ -151,21 +193,22 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
               <h3 className="font-medium mb-2">Select Chapter</h3>
               {selectedBook ? (
                 <div className="space-y-2">
-                  {books
-                    .find(book => book.id === selectedBook)
-                    ?.chapters.map((chapter) => (
-                      <button
-                        key={chapter.id}
-                        className={`block w-full text-left px-3 py-2 rounded-md ${
-                          selectedChapter === chapter.id 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'hover:bg-gray-100'
-                        }`}
-                        onClick={() => handleChapterSelect(chapter.id)}
-                      >
-                        {chapter.title}
-                      </button>
-                    ))}
+                  {/* FIXED: Safe access with optional chaining and nullish coalescing */}
+                  {selectedBookData?.chapters?.map((chapter) => (
+                    <button
+                      key={chapter.id}
+                      className={`block w-full text-left px-3 py-2 rounded-md ${
+                        selectedChapter === chapter.id 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => handleChapterSelect(chapter.id)}
+                    >
+                      {chapter.title}
+                    </button>
+                  )) || (
+                    <p className="text-gray-500 text-sm">No chapters found for this textbook</p>
+                  )}
                 </div>
               ) : (
                 <p className="text-gray-500 text-sm">Please select a textbook first</p>
@@ -188,7 +231,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                     >
                       <p className="font-medium">{question.text}</p>
                       <p className="text-sm text-gray-500 mt-1">
-                        Difficulty: {question.difficulty} | Options: {question.options.length}
+                        Difficulty: {question.difficulty} | Options: {question.options?.length || 0}
                       </p>
                     </button>
                   ))}
@@ -227,6 +270,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                   onClick={() => setDifficulty('easy')}
+                  type="button" // ADDED: Explicit button type
                 >
                   Easy
                 </button>
@@ -237,6 +281,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                   onClick={() => setDifficulty('medium')}
+                  type="button" // ADDED: Explicit button type
                 >
                   Medium
                 </button>
@@ -247,6 +292,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                   onClick={() => setDifficulty('hard')}
+                  type="button" // ADDED: Explicit button type
                 >
                   Hard
                 </button>
@@ -258,6 +304,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                 className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 onClick={handleAIFetch}
                 disabled={!concept || isLoading}
+                type="button" // ADDED: Explicit button type
               >
                 {isLoading ? 'Loading...' : 'Generate Questions'}
               </button>
@@ -275,10 +322,11 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                     key={question.id}
                     className="block w-full text-left p-3 border rounded-md hover:bg-gray-50"
                     onClick={() => onQuestionSelected(question)}
+                    type="button" // ADDED: Explicit button type
                   >
                     <p className="font-medium">{question.text}</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Difficulty: {question.difficulty} | Options: {question.options.length}
+                      Difficulty: {question.difficulty} | Options: {question.options?.length || 0}
                     </p>
                   </button>
                 ))}

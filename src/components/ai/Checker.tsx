@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Question, CanvasData, CheckResult } from '../../types';
+// src/components/ai/Checker.tsx - Fixed version
+import { useState, useEffect, useRef } from 'react';
+import { Question, CanvasData, CheckResult, StepCheckResult } from '../../types';
 import { useChecker } from '../../hooks/useChecker';
 import Annotation from './Annotation';
 import AICard from './AICard';
@@ -14,26 +15,77 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
   const [isChecking, setIsChecking] = useState(true);
   const [checkResults, setCheckResults] = useState<CheckResult | null>(null);
   const [expandedErrors, setExpandedErrors] = useState<string[]>([]);
-  const { checkWork } = useChecker();
+  const [expandedWarnings, setExpandedWarnings] = useState<string[]>([]);
+  const { checkWork, resetChecker } = useChecker();
   
+  // Use a ref to track the current question ID to prevent stale closures
+  const currentQuestionIdRef = useRef<string | null>(null);
+  
+  // Reset checker only when the question actually changes
   useEffect(() => {
-    if (!canvasData) return;
-    
-    // Simulate checking process with a delay
-    const timer = setTimeout(() => {
-      const results = checkWork(canvasData, question);
-      setCheckResults(results);
+    if (currentQuestionIdRef.current !== question.id) {
+      resetChecker();
+      currentQuestionIdRef.current = question.id;
+    }
+  }, [question.id, resetChecker]);
+  
+  // Clean up when component unmounts
+  useEffect(() => {
+    return () => {
+      // Only reset if we're unmounting the whole component
+      resetChecker();
+    };
+  }, [resetChecker]);
+  
+  // Check the work whenever canvasData changes
+  useEffect(() => {
+    // Don't check if we have no data
+    if (!canvasData || !canvasData.steps || canvasData.steps.length === 0) {
       setIsChecking(false);
-      
-      // Auto-expand the first error if any
-      if (results.hasError) {
-        const firstErrorStep = results.steps.find((step) => !step.isCorrect);
-        if (firstErrorStep) {
-          setExpandedErrors([firstErrorStep.id]);
-        }
-      }
-    }, 1500);
+      setCheckResults(null);
+      return;
+    }
     
+    // Save the question ID we're checking for
+    const questionIdBeingChecked = question.id;
+    
+    // Start checking
+    setIsChecking(true);
+    
+    const timer = setTimeout(() => {
+      try {
+        // Only proceed if we're still checking the same question
+        if (questionIdBeingChecked === currentQuestionIdRef.current) {
+          const results = checkWork(canvasData, question);
+          setCheckResults(results);
+          
+          // Auto-expand the first error if any
+          if (results.hasError && results.steps && results.steps.length > 0) {
+            const firstErrorStep = results.steps.find((step) => !step.isCorrect);
+            if (firstErrorStep) {
+              setExpandedErrors((prev) => {
+                // Avoid duplicate entries
+                if (!prev.includes(firstErrorStep.id)) {
+                  return [...prev, firstErrorStep.id];
+                }
+                return prev;
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking work:", error);
+        // Handle error gracefully with a properly typed empty result
+        setCheckResults({
+          hasError: false,
+          steps: [] as StepCheckResult[]
+        });
+      } finally {
+        setIsChecking(false);
+      }
+    }, 1000);
+    
+    // Clean up timer if component unmounts or canvasData changes
     return () => {
       clearTimeout(timer);
     };
@@ -47,6 +99,15 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
     );
   };
   
+  const toggleWarningExpand = (stepId: string) => {
+    setExpandedWarnings((prev) => 
+      prev.includes(stepId)
+        ? prev.filter(id => id !== stepId)
+        : [...prev, stepId]
+    );
+  };
+  
+  // Show a message when no work is detected
   if (!canvasData || !canvasData.steps || canvasData.steps.length === 0) {
     return (
       <AICard onClose={onClose}>
@@ -68,18 +129,43 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
             <p>Checking your work...</p>
           </div>
         </AICard>
-      ) : checkResults && (
+      ) : checkResults ? (
         <>
-          {/* Annotations for each step */}
-          {checkResults.steps.map((step: StepCheckResult) => (
-            <Annotation
-              key={step.id}
-              step={step}
-              canvasStep={canvasData?.steps?.find((s) => s.id === step.id)}
-              isExpanded={expandedErrors.includes(step.id)}
-              onToggleExpand={() => toggleErrorExpand(step.id)}
-            />
-          ))}
+          {/* Annotations for each step with errors */}
+          {checkResults.steps && checkResults.steps.map((step: StepCheckResult) => {
+            // Find the corresponding canvas step
+            const canvasStep = canvasData.steps?.find((s) => s.id === step.id);
+            
+            // Only render if we found a matching canvas step
+            return canvasStep ? (
+              <Annotation
+                key={`error-${step.id}`}
+                step={step}
+                canvasStep={canvasStep}
+                isExpanded={expandedErrors.includes(step.id)}
+                onToggleExpand={() => toggleErrorExpand(step.id)}
+                isWarning={false}
+              />
+            ) : null;
+          })}
+          
+          {/* Annotations for steps with warnings (dependent errors) */}
+          {checkResults.dependentErrorSteps && checkResults.dependentErrorSteps.map((step: StepCheckResult) => {
+            // Find the corresponding canvas step
+            const canvasStep = canvasData.steps?.find((s) => s.id === step.id);
+            
+            // Only render if we found a matching canvas step
+            return canvasStep ? (
+              <Annotation
+                key={`warning-${step.id}`}
+                step={step}
+                canvasStep={canvasStep}
+                isExpanded={expandedWarnings.includes(step.id)}
+                onToggleExpand={() => toggleWarningExpand(step.id)}
+                isWarning={true}
+              />
+            ) : null;
+          })}
           
           {/* Summary card */}
           <AICard onClose={onClose}>
@@ -94,6 +180,11 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
                   ? 'I\'ve marked the issues in your work. Click on any ❌ for more details.'
                   : 'All your steps are correct! Well done.'}
               </p>
+              {checkResults.dependentErrorSteps && checkResults.dependentErrorSteps.length > 0 && (
+                <p className="text-yellow-700 text-sm mb-2">
+                  Some steps may be affected by earlier errors. These are marked with a yellow warning icon.
+                </p>
+              )}
               {checkResults.hasError && checkResults.hintMessage && (
                 <div className="mt-4 bg-blue-50 p-3 rounded-md text-blue-700 text-sm">
                   <p className="font-bold mb-1">Hint:</p>
@@ -103,7 +194,7 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
             </div>
           </AICard>
         </>
-      )}
+      ) : null}
     </div>
   );
 };

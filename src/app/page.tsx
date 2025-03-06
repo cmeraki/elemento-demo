@@ -1,5 +1,6 @@
-// src/app/page.tsx
-"use client";
+'use client';
+
+// src/app/page.tsx - Updated to handle Checker component properly
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Canvas from '../components/canvas/Canvas';
 import QuestionSelect from '../components/question/QuestionSelect';
@@ -29,42 +30,47 @@ export default function Home() {
   
   // Track if we should update canvas data
   const isUpdatingCanvasRef = useRef(false);
+  const checkerWasShownRef = useRef(false);
   
+  // Reset AI components when view changes
   useEffect(() => {
-    // Reset AI states when view changes
     if (currentView !== 'canvas') {
       setAiMode(null);
       setIsListening(false);
       setShowChecker(false);
       setShowHint(false);
+      // Don't reset implicitCheckResult here as we need it when returning to canvas
+      checkerWasShownRef.current = false;
     }
   }, [currentView]);
   
-  const handleQuestionSelected = (question: Question) => {
+  const handleQuestionSelected = useCallback((question: Question) => {
     setSelectedQuestion(question);
     setCurrentView('canvas');
     setShowQuestion(true);
-  };
+    setImplicitCheckResult(null); // Reset any previous check results
+    setCanvasData(null); // Reset canvas data
+  }, []);
   
-  const handleNewQuestion = () => {
+  const handleNewQuestion = useCallback(() => {
     setCurrentView('questionSelect');
-  };
+  }, []);
   
-  const handleCloseQuestion = () => {
+  const handleCloseQuestion = useCallback(() => {
     setShowQuestion(false);
-  };
+  }, []);
   
-  const handleShowSolution = () => {
+  const handleShowSolution = useCallback(() => {
     setCurrentView('solution');
-  };
+  }, []);
   
-  const handleShowCanvas = () => {
+  const handleShowCanvas = useCallback(() => {
     setCurrentView('canvas');
-  };
+  }, []);
   
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     setShowSidebar(!showSidebar);
-  };
+  }, [showSidebar]);
   
   // Wrap canvas update handler in useCallback to prevent re-creation
   const handleCanvasUpdate = useCallback((data: CanvasData) => {
@@ -86,11 +92,18 @@ export default function Home() {
     setTimeout(() => {
       isUpdatingCanvasRef.current = false;
     }, 0);
-  }, [canvasData]);
+    
+    // If the checker was shown and the canvas is updated, auto-hide it
+    if (checkerWasShownRef.current && showChecker) {
+      setTimeout(() => {
+        setShowChecker(false);
+      }, 300);
+    }
+  }, [canvasData, showChecker]);
   
-  const handleAIButtonClick = () => {
+  const handleAIButtonClick = useCallback(() => {
     setIsListening(true);
-  };
+  }, []);
   
   const handleVoiceIntent = useCallback((intent: AIMode) => {
     setAiMode(intent);
@@ -99,6 +112,7 @@ export default function Home() {
     if (intent === 'checker') {
       setShowChecker(true);
       setShowHint(false);
+      checkerWasShownRef.current = true;
     } else if (intent === 'hint') {
       setShowHint(true);
       setShowChecker(false);
@@ -107,16 +121,19 @@ export default function Home() {
   
   // Wrap implicit check handler in useCallback
   const handleImplicitCheck = useCallback((result: CheckResult) => {
-    setImplicitCheckResult(result);
-  }, []);
+    // Only update if there's an error or if previous result had an error
+    if (result.hasError || (implicitCheckResult && implicitCheckResult.hasError)) {
+      setImplicitCheckResult(result);
+    }
+  }, [implicitCheckResult]);
   
   const closeAIModals = useCallback(() => {
     setShowChecker(false);
     setShowHint(false);
   }, []);
   
-  // Create a sample math question if nothing is selected
-  const sampleQuestion: Question = {
+  // Make sure we have a question
+  const displayQuestion = selectedQuestion || {
     id: 'sample-1',
     text: 'What is the derivative of f(x) = x³ + 2x² - 4x + 7?',
     options: [
@@ -152,14 +169,14 @@ export default function Home() {
           <Canvas 
             onUpdate={handleCanvasUpdate}
             canvasData={canvasData}
-            question={selectedQuestion || sampleQuestion}
+            question={displayQuestion}
             onNewQuestion={handleNewQuestion}
           />
           
           {/* Question Display */}
           {showQuestion && (
             <QuestionDisplay 
-              question={selectedQuestion || sampleQuestion}
+              question={displayQuestion}
               onClose={handleCloseQuestion}
             />
           )}
@@ -169,6 +186,7 @@ export default function Home() {
             <button
               className="absolute top-6 right-6 bg-blue-500 text-white p-2 rounded-full shadow-lg"
               onClick={() => setShowQuestion(true)}
+              aria-label="Show question"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -183,43 +201,44 @@ export default function Home() {
             onVoiceIntent={handleVoiceIntent}
           />
           
-          {/* Implicit Checker */}
-          {canvasData && canvasData.paths.length > 0 && (
+          {/* Implicit Checker - Only show when we have canvas data */}
+          {canvasData && canvasData.paths && canvasData.paths.length > 0 && (
             <ImplicitChecker 
               canvasData={canvasData}
-              question={selectedQuestion || sampleQuestion}
+              question={displayQuestion}
               onCheckResult={handleImplicitCheck}
             />
           )}
           
           {/* Checker Component */}
-          {showChecker && (
+          {showChecker && canvasData && (
             <Checker 
               canvasData={canvasData}
-              question={selectedQuestion || sampleQuestion}
+              question={displayQuestion}
               onClose={closeAIModals}
             />
           )}
           
           {/* Hint Component */}
-          {showHint && (
+          {showHint && canvasData && (
             <Hint
               canvasData={canvasData}
-              question={selectedQuestion || sampleQuestion}
+              question={displayQuestion}
               onClose={closeAIModals}
             />
           )}
           
           {/* Error notification from implicit checker */}
-          {implicitCheckResult && implicitCheckResult.hasError && (
-            <div 
+          {implicitCheckResult && implicitCheckResult.hasError && !showChecker && (
+            <button 
               className="absolute top-1/4 right-12 bg-red-100 text-red-700 p-2 rounded-full shadow-lg cursor-pointer animate-bounce"
               onClick={() => setShowChecker(true)}
+              aria-label="Show error details"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-            </div>
+            </button>
           )}
         </>
       )}
@@ -227,7 +246,7 @@ export default function Home() {
       {/* Solution View */}
       {currentView === 'solution' && (
         <Solution 
-          question={selectedQuestion || sampleQuestion}
+          question={displayQuestion}
           onBack={handleShowCanvas}
         />
       )}
@@ -237,6 +256,7 @@ export default function Home() {
         <button
           className="absolute top-6 left-6 bg-gray-800 text-white p-2 rounded-md shadow-lg z-20"
           onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -259,6 +279,7 @@ export default function Home() {
         <button
           className="absolute bottom-24 right-6 bg-blue-500 text-white p-3 rounded-full shadow-lg"
           onClick={handleNewQuestion}
+          aria-label="New question"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
