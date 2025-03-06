@@ -1,6 +1,7 @@
 'use client';
+// src/app/page.tsx
+// Updated to use permanent sidebar and adjust layout
 
-// src/app/page.tsx - Updated to handle Checker component properly
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Canvas from '../components/canvas/Canvas';
 import QuestionSelect from '../components/question/QuestionSelect';
@@ -12,13 +13,13 @@ import ImplicitChecker from '../components/ai/ImplicitChecker';
 import Checker from '../components/ai/Checker';
 import Hint from '../components/ai/Hint';
 import { Question, AppView, AIMode, CanvasData, CheckResult } from '../types';
+import { useTabletLayout } from '../hooks/useTabletLayout';
 
 export default function Home() {
   // App state
   const [currentView, setCurrentView] = useState<AppView>('questionSelect');
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [showQuestion, setShowQuestion] = useState(true);
-  const [showSidebar, setShowSidebar] = useState(false);
   const [canvasData, setCanvasData] = useState<CanvasData | null>(null);
   
   // AI state
@@ -28,9 +29,27 @@ export default function Home() {
   const [showHint, setShowHint] = useState(false);
   const [implicitCheckResult, setImplicitCheckResult] = useState<CheckResult | null>(null);
   
+  // Get tablet layout values
+  const { canvasHeight, questionBarHeight } = useTabletLayout();
+  
   // Track if we should update canvas data
   const isUpdatingCanvasRef = useRef(false);
   const checkerWasShownRef = useRef(false);
+  
+  // Setup dynamic viewport height
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    setVh();
+    window.addEventListener('resize', setVh);
+    
+    return () => {
+      window.removeEventListener('resize', setVh);
+    };
+  }, []);
   
   // Reset AI components when view changes
   useEffect(() => {
@@ -39,7 +58,6 @@ export default function Home() {
       setIsListening(false);
       setShowChecker(false);
       setShowHint(false);
-      // Don't reset implicitCheckResult here as we need it when returning to canvas
       checkerWasShownRef.current = false;
     }
   }, [currentView]);
@@ -48,8 +66,8 @@ export default function Home() {
     setSelectedQuestion(question);
     setCurrentView('canvas');
     setShowQuestion(true);
-    setImplicitCheckResult(null); // Reset any previous check results
-    setCanvasData(null); // Reset canvas data
+    setImplicitCheckResult(null);
+    setCanvasData(null);
   }, []);
   
   const handleNewQuestion = useCallback(() => {
@@ -68,16 +86,9 @@ export default function Home() {
     setCurrentView('canvas');
   }, []);
   
-  const toggleSidebar = useCallback(() => {
-    setShowSidebar(!showSidebar);
-  }, [showSidebar]);
-  
-  // Wrap canvas update handler in useCallback to prevent re-creation
   const handleCanvasUpdate = useCallback((data: CanvasData) => {
-    // Prevent infinite update cycles by checking if we're already updating
     if (isUpdatingCanvasRef.current) return;
     
-    // Don't update if nothing has changed
     if (
       canvasData?.paths === data.paths && 
       canvasData?.steps?.length === data.steps?.length
@@ -88,12 +99,10 @@ export default function Home() {
     isUpdatingCanvasRef.current = true;
     setCanvasData(data);
     
-    // Reset update flag after state update completes
     setTimeout(() => {
       isUpdatingCanvasRef.current = false;
     }, 0);
     
-    // If the checker was shown and the canvas is updated, auto-hide it
     if (checkerWasShownRef.current && showChecker) {
       setTimeout(() => {
         setShowChecker(false);
@@ -119,9 +128,7 @@ export default function Home() {
     }
   }, []);
   
-  // Wrap implicit check handler in useCallback
   const handleImplicitCheck = useCallback((result: CheckResult) => {
-    // Only update if there's an error or if previous result had an error
     if (result.hasError || (implicitCheckResult && implicitCheckResult.hasError)) {
       setImplicitCheckResult(result);
     }
@@ -155,137 +162,128 @@ export default function Home() {
   };
   
   return (
-    <div className="h-screen w-screen relative bg-gray-50 overflow-hidden">
-      {/* Question Select View */}
-      {currentView === 'questionSelect' && (
-        <div className="absolute inset-0 bg-white z-10">
-          <QuestionSelect onQuestionSelected={handleQuestionSelected} />
-        </div>
-      )}
-      
-      {/* Canvas View */}
-      {currentView === 'canvas' && (
-        <>
-          <Canvas 
-            onUpdate={handleCanvasUpdate}
-            canvasData={canvasData}
-            question={displayQuestion}
-            onNewQuestion={handleNewQuestion}
-          />
-          
-          {/* Question Display */}
-          {showQuestion && (
-            <QuestionDisplay 
-              question={displayQuestion}
-              onClose={handleCloseQuestion}
-            />
-          )}
-          
-          {/* Floating button to show question if closed */}
-          {!showQuestion && (
-            <button
-              className="absolute top-6 right-6 bg-blue-500 text-white p-2 rounded-full shadow-lg"
-              onClick={() => setShowQuestion(true)}
-              aria-label="Show question"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
-          )}
-          
-          {/* AI Button */}
-          <AIButton 
-            isListening={isListening}
-            onClick={handleAIButtonClick}
-            onVoiceIntent={handleVoiceIntent}
-          />
-          
-          {/* Implicit Checker - Only show when we have canvas data */}
-          {canvasData && canvasData.paths && canvasData.paths.length > 0 && (
-            <ImplicitChecker 
-              canvasData={canvasData}
-              question={displayQuestion}
-              onCheckResult={handleImplicitCheck}
-            />
-          )}
-          
-          {/* Checker Component */}
-          {showChecker && canvasData && (
-            <Checker 
-              canvasData={canvasData}
-              question={displayQuestion}
-              onClose={closeAIModals}
-            />
-          )}
-          
-          {/* Hint Component */}
-          {showHint && canvasData && (
-            <Hint
-              canvasData={canvasData}
-              question={displayQuestion}
-              onClose={closeAIModals}
-            />
-          )}
-          
-          {/* Error notification from implicit checker */}
-          {implicitCheckResult && implicitCheckResult.hasError && !showChecker && (
-            <button 
-              className="absolute top-1/4 right-12 bg-red-100 text-red-700 p-2 rounded-full shadow-lg cursor-pointer animate-bounce"
-              onClick={() => setShowChecker(true)}
-              aria-label="Show error details"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </button>
-          )}
-        </>
-      )}
-      
-      {/* Solution View */}
-      {currentView === 'solution' && (
-        <Solution 
-          question={displayQuestion}
-          onBack={handleShowCanvas}
-        />
-      )}
-      
-      {/* Sidebar Toggle Button */}
+    <div className="h-[100dvh] w-screen relative bg-gray-50 overflow-hidden use-real-height">
+      {/* Permanent Sidebar */}
       {currentView !== 'questionSelect' && (
-        <button
-          className="absolute top-6 left-6 bg-gray-800 text-white p-2 rounded-md shadow-lg z-20"
-          onClick={toggleSidebar}
-          aria-label="Toggle sidebar"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      )}
-      
-      {/* Sidebar */}
-      {showSidebar && (
-        <Sidebar 
+        <Sidebar
           onShowSolution={handleShowSolution}
           onShowCanvas={handleShowCanvas}
           currentView={currentView}
-          onClose={() => setShowSidebar(false)}
         />
       )}
       
-      {/* Floating button to add new question */}
-      {currentView !== 'questionSelect' && (
-        <button
-          className="absolute bottom-24 right-6 bg-blue-500 text-white p-3 rounded-full shadow-lg"
-          onClick={handleNewQuestion}
-          aria-label="New question"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      )}
+      {/* Main Content - Adjusted for sidebar */}
+      <div className={`relative h-full ${currentView !== 'questionSelect' ? 'ml-12' : ''}`}>
+        {/* Question Select View */}
+        {currentView === 'questionSelect' && (
+          <div className="absolute inset-0 bg-white z-10">
+            <QuestionSelect onQuestionSelected={handleQuestionSelected} />
+          </div>
+        )}
+        
+        {/* Canvas View */}
+        {currentView === 'canvas' && (
+          <>
+            <Canvas 
+              onUpdate={handleCanvasUpdate}
+              canvasData={canvasData}
+              question={displayQuestion}
+              onNewQuestion={handleNewQuestion}
+              style={{ 
+                height: canvasHeight,
+                marginTop: `${questionBarHeight}px`
+              }}
+            />
+            
+            {/* Question Display */}
+            {showQuestion && (
+              <QuestionDisplay 
+                question={displayQuestion}
+                onClose={handleCloseQuestion}
+              />
+            )}
+            
+            {/* Floating button to show question if closed */}
+            {!showQuestion && (
+              <button
+                className="absolute top-3 right-3 bg-blue-500 text-white p-2 rounded-full shadow-lg"
+                onClick={() => setShowQuestion(true)}
+                aria-label="Show question"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            )}
+            
+            {/* AI Button */}
+            <AIButton 
+              isListening={isListening}
+              onClick={handleAIButtonClick}
+              onVoiceIntent={handleVoiceIntent}
+            />
+            
+            {/* Implicit Checker */}
+            {canvasData && canvasData.paths && canvasData.paths.length > 0 && (
+              <ImplicitChecker 
+                canvasData={canvasData}
+                question={displayQuestion}
+                onCheckResult={handleImplicitCheck}
+              />
+            )}
+            
+            {/* Checker Component */}
+            {showChecker && canvasData && (
+              <Checker 
+                canvasData={canvasData}
+                question={displayQuestion}
+                onClose={closeAIModals}
+              />
+            )}
+            
+            {/* Hint Component */}
+            {showHint && canvasData && (
+              <Hint
+                canvasData={canvasData}
+                question={displayQuestion}
+                onClose={closeAIModals}
+              />
+            )}
+            
+            {/* Error notification from implicit checker */}
+            {implicitCheckResult && implicitCheckResult.hasError && !showChecker && (
+              <button 
+                className="absolute top-1/4 right-3 bg-red-100 text-red-700 p-2 rounded-full shadow-lg cursor-pointer animate-bounce"
+                onClick={() => setShowChecker(true)}
+                aria-label="Show error details"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </button>
+            )}
+            
+            {/* Floating button to add new question */}
+            <button
+              className="absolute bottom-14 right-3 bg-blue-500 text-white p-2 rounded-full shadow-lg"
+              onClick={handleNewQuestion}
+              aria-label="New question"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </>
+        )}
+        
+        {/* Solution View */}
+        {currentView === 'solution' && (
+          <Solution 
+            question={displayQuestion}
+            onBack={handleShowCanvas}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
-// src/components/canvas/Canvas.tsx - Fixed version
-"use client";
-import { useRef, useEffect, useState, MouseEvent, TouchEvent, useCallback } from 'react';
+// src/components/canvas/Canvas.tsx
+// Updated to accept style prop for dynamic sizing
+
+import { useRef, useEffect, useState, MouseEvent, TouchEvent, useCallback, CSSProperties } from 'react';
 import DrawingTools from './DrawingTools';
 import ColorPicker from './ColorPicker';
 import { Question, CanvasData, CanvasStep } from '../../types';
@@ -10,6 +11,7 @@ interface CanvasProps {
   onNewQuestion?: () => void;
   onUpdate?: (data: CanvasData) => void;
   canvasData?: CanvasData | null;
+  style?: CSSProperties; // Added style prop for dynamic sizing
 }
 
 type DrawingTool = 'pen' | 'marker' | 'highlighter' | 'eraser';
@@ -33,7 +35,7 @@ interface Path2DWithStyle extends Path2D {
   width?: StrokeWidth;
 }
 
-const Canvas = ({ question, onNewQuestion, onUpdate, canvasData }: CanvasProps) => {
+const Canvas = ({ question, onNewQuestion, onUpdate, canvasData, style }: CanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
@@ -422,7 +424,8 @@ const Canvas = ({ question, onNewQuestion, onUpdate, canvasData }: CanvasProps) 
       {/* Canvas Area */}
       <div 
         ref={containerRef}
-        className="flex-grow relative overflow-hidden"
+        className="flex-grow relative overflow-hidden canvas-component"
+        style={style} // Apply dynamic styles from parent
       >
         <canvas
           ref={canvasRef}
@@ -439,8 +442,8 @@ const Canvas = ({ question, onNewQuestion, onUpdate, canvasData }: CanvasProps) 
       </div>
       
       {/* Drawing Tools - Floating bubble style */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-        <div className="bg-gray-100 bg-opacity-90 rounded-full shadow-lg py-2 px-4 flex items-center space-x-2">
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 toolbar-component">
+        <div className="bg-gray-100 bg-opacity-90 rounded-full shadow-lg py-1.5 px-3 flex items-center space-x-2">
           <DrawingTools 
             activeTool={drawingState.tool}
             onToolChange={handleToolChange}
@@ -451,7 +454,7 @@ const Canvas = ({ question, onNewQuestion, onUpdate, canvasData }: CanvasProps) 
             canRedo={drawingState.redoStack.length > 0}
           />
           
-          <div className="border-r border-gray-300 h-8 mx-2"></div>
+          <div className="border-r border-gray-300 h-6 mx-1.5"></div>
           
           <ColorPicker 
             activeColor={drawingState.color}
@@ -459,16 +462,6 @@ const Canvas = ({ question, onNewQuestion, onUpdate, canvasData }: CanvasProps) 
             strokeWidth={drawingState.width}
             onStrokeWidthChange={handleStrokeWidthChange}
           />
-          
-          {/* If question and onNewQuestion are provided, show the NewQuestion button */}
-          {question && onNewQuestion && (
-            <button
-              className="ml-4 bg-blue-500 text-white px-4 py-1 rounded-full text-sm"
-              onClick={onNewQuestion}
-            >
-              New Question
-            </button>
-          )}
         </div>
       </div>
     </div>
