@@ -1,6 +1,6 @@
 import { useState, ChangeEvent, DragEvent, useRef } from 'react';
 import { Question } from '../../types';
-import { extractTextFromImage } from '../../ utils/ocr';
+import { extractTextFromImage } from '../../utils/ocr';
 
 interface UploadQuestionProps {
   onQuestionSelected: (question: Question) => void;

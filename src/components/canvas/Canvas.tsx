@@ -1,12 +1,15 @@
+// src/components/canvas/Canvas.tsx - Fixed version
 "use client";
-import { useRef, useEffect, useState, MouseEvent, TouchEvent } from 'react';
+import { useRef, useEffect, useState, MouseEvent, TouchEvent, useCallback } from 'react';
 import DrawingTools from './DrawingTools';
 import ColorPicker from './ColorPicker';
-import { Question } from '../../types';
+import { Question, CanvasData, CanvasStep } from '../../types';
 
 interface CanvasProps {
   question?: Question | null;
   onNewQuestion?: () => void;
+  onUpdate?: (data: CanvasData) => void;
+  canvasData?: CanvasData | null;
 }
 
 type DrawingTool = 'pen' | 'marker' | 'highlighter' | 'eraser';
@@ -21,6 +24,7 @@ interface DrawingState {
   paths: Path2D[];
   currentPath: Path2D | null;
   redoStack: Path2D[];
+  recognizedSteps: CanvasStep[];
 }
 
 interface Path2DWithStyle extends Path2D {
@@ -29,9 +33,11 @@ interface Path2DWithStyle extends Path2D {
   width?: StrokeWidth;
 }
 
-const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
+const Canvas = ({ question, onNewQuestion, onUpdate, canvasData }: CanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
+  const shouldUpdateParentRef = useRef(false);
   
   const [drawingState, setDrawingState] = useState<DrawingState>({
     tool: 'pen',
@@ -40,63 +46,12 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
     isDrawing: false,
     paths: [],
     currentPath: null,
-    redoStack: []
+    redoStack: [],
+    recognizedSteps: []
   });
   
-  // Initialize canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    
-    if (!canvas || !container) return;
-    
-    // Make canvas responsive to container
-    const resizeCanvas = () => {
-      const { width, height } = container.getBoundingClientRect();
-      canvas.width = width;
-      canvas.height = height;
-      redrawCanvas();
-    };
-    
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Add ruled lines to the canvas
-    drawRuledLines();
-    
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-    };
-  }, []);
-  
-  // Redraw canvas whenever paths change
-  useEffect(() => {
-    redrawCanvas();
-  }, [drawingState.paths]);
-  
-  const drawRuledLines = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.strokeStyle = '#e6e6e6';
-    ctx.lineWidth = 1;
-    
-    // Draw horizontal ruled lines
-    const lineSpacing = 30; // Spacing between lines
-    const yStart = lineSpacing;
-    
-    for (let y = yStart; y < canvas.height; y += lineSpacing) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-  };
-  
-  const redrawCanvas = () => {
+  // Define redrawCanvas as a useCallback to avoid dependency warnings
+  const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -133,7 +88,111 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
     // Reset canvas state
     ctx.globalAlpha = 1.0;
     ctx.globalCompositeOperation = 'source-over';
-  };
+  }, [drawingState.paths]);
+  
+  const drawRuledLines = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.strokeStyle = '#e6e6e6';
+    ctx.lineWidth = 1;
+    
+    // Draw horizontal ruled lines
+    const lineSpacing = 30; // Spacing between lines
+    const yStart = lineSpacing;
+    
+    for (let y = yStart; y < canvas.height; y += lineSpacing) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+  }, []);
+  
+  // Initialize canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    
+    if (!canvas || !container) return;
+    
+    // Make canvas responsive to container
+    const resizeCanvas = () => {
+      const { width, height } = container.getBoundingClientRect();
+      canvas.width = width;
+      canvas.height = height;
+      redrawCanvas();
+    };
+    
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Add ruled lines to the canvas
+    drawRuledLines();
+    
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, [redrawCanvas, drawRuledLines]);
+  
+  // Load canvas data only once on initial render
+  useEffect(() => {
+    if (initializedRef.current) return;
+    
+    if (canvasData && canvasData.paths && canvasData.paths.length > 0) {
+      setDrawingState(prev => ({
+        ...prev,
+        paths: canvasData.paths,
+        recognizedSteps: canvasData.steps || []
+      }));
+    }
+    
+    initializedRef.current = true;
+  }, [canvasData]);
+  
+  // Update parent component with canvas data when paths change
+  // But only after user actions, not from receiving new canvasData
+  useEffect(() => {
+    if (!shouldUpdateParentRef.current) return;
+    if (!onUpdate) return;
+    
+    // Mock text recognition - in a real app, you would use a handwriting recognition API
+    const mockRecognizeText = () => {
+      // These would be actual recognized steps from the canvas
+      const recognizedSteps: CanvasStep[] = [
+        {
+          id: '1',
+          content: "f(x) = x³ + 2x² - 4x + 7",
+          bbox: { x: 50, y: 100, width: 300, height: 30 }
+        },
+        {
+          id: '2',
+          content: "f'(x) = 3x² + 4x - 4",
+          bbox: { x: 50, y: 150, width: 300, height: 30 }
+        }
+      ];
+      
+      return recognizedSteps;
+    };
+    
+    const recognizedSteps = mockRecognizeText();
+    
+    // Reset the flag
+    shouldUpdateParentRef.current = false;
+    
+    onUpdate({
+      paths: drawingState.paths,
+      steps: recognizedSteps
+    });
+  }, [drawingState.paths, onUpdate]);
+  
+  // Redraw canvas whenever paths change
+  useEffect(() => {
+    redrawCanvas();
+  }, [drawingState.paths, redrawCanvas]);
   
   const startDrawing = (x: number, y: number) => {
     const newPath = new Path2D() as Path2DWithStyle;
@@ -193,6 +252,9 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
   
   const endDrawing = () => {
     if (!drawingState.isDrawing || !drawingState.currentPath) return;
+    
+    // Set the flag to update parent on the next render
+    shouldUpdateParentRef.current = true;
     
     setDrawingState(prev => ({
       ...prev,
@@ -297,6 +359,9 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
   const handleUndo = () => {
     if (drawingState.paths.length === 0) return;
     
+    // Set the flag to update parent on the next render
+    shouldUpdateParentRef.current = true;
+    
     const lastPath = drawingState.paths[drawingState.paths.length - 1];
     const newPaths = drawingState.paths.slice(0, -1);
     
@@ -309,6 +374,9 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
   
   const handleRedo = () => {
     if (drawingState.redoStack.length === 0) return;
+    
+    // Set the flag to update parent on the next render
+    shouldUpdateParentRef.current = true;
     
     const pathToRedo = drawingState.redoStack[drawingState.redoStack.length - 1];
     const newRedoStack = drawingState.redoStack.slice(0, -1);
@@ -329,6 +397,9 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Set the flag to update parent on the next render
+    shouldUpdateParentRef.current = true;
+    
     setDrawingState(prev => ({
       ...prev,
       paths: [],
@@ -336,6 +407,14 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
     }));
     
     drawRuledLines();
+    
+    // Let parent know the canvas was cleared
+    if (onUpdate) {
+      onUpdate({
+        paths: [],
+        steps: []
+      });
+    }
   };
   
   return (
@@ -380,6 +459,16 @@ const Canvas = ({ question, onNewQuestion }: CanvasProps) => {
             strokeWidth={drawingState.width}
             onStrokeWidthChange={handleStrokeWidthChange}
           />
+          
+          {/* If question and onNewQuestion are provided, show the NewQuestion button */}
+          {question && onNewQuestion && (
+            <button
+              className="ml-4 bg-blue-500 text-white px-4 py-1 rounded-full text-sm"
+              onClick={onNewQuestion}
+            >
+              New Question
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -4,6 +4,17 @@ export interface QuestionOption {
   isCorrect: boolean;
 }
 
+export interface SolutionStep {
+  id: number;
+  content: string;
+  latex: string;
+}
+
+export interface Solution {
+  steps: SolutionStep[];
+  explanation?: string;
+}
+
 export interface Question {
   id: string;
   text: string;
@@ -11,6 +22,7 @@ export interface Question {
   difficulty: 'easy' | 'medium' | 'hard';
   subject: string;
   chapter: string;
+  solution?: Solution;
 }
 
 export interface GetQuestionsParams {
@@ -18,6 +30,37 @@ export interface GetQuestionsParams {
   concept?: string;
   difficulty?: 'easy' | 'medium' | 'hard';
   count: number;
+}
+
+export type AppView = 'questionSelect' | 'canvas' | 'solution';
+export type AIMode = 'checker' | 'hint';
+
+export interface CanvasStep {
+  id: string;
+  content: string;
+  bbox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  isCorrect?: boolean;
+  errorMessage?: string;
+}
+
+export interface CanvasData {
+  paths: Path2D[];
+  steps?: CanvasStep[];
+}
+
+export interface CheckResult {
+  hasError: boolean;
+  steps: {
+    id: string;
+    isCorrect: boolean;
+    errorMessage?: string;
+  }[];
+  hintMessage?: string;
 }
 
 // src/data/questionLibrary.jsonl

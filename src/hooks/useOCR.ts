@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { extractTextFromImage } from '../ utils/ocr';
+import { extractTextFromImage } from '../utils/ocr';
 
 export const useOCR = () => {
   const [isProcessing, setIsProcessing] = useState(false);
