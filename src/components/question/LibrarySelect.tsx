@@ -76,6 +76,8 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null); // ADDED: Error state for error handling
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcription, setTranscription] = useState('');
   
   const handleBookSelect = (bookId: string) => {
     setSelectedBook(bookId);
@@ -127,6 +129,23 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
       setQuestions([]); // Clear questions on error
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const toggleRecording = () => {
+    if (isRecording) {
+      // Stop recording
+      setIsRecording(false);
+      // Simulate receiving a transcription after a delay
+      setTimeout(() => {
+        const exampleTranscription = "Conservation of momentum in collisions";
+        setTranscription(exampleTranscription);
+        setConcept(exampleTranscription);
+      }, 1500);
+    } else {
+      // Start recording
+      setIsRecording(true);
+      setTranscription('');
     }
   };
   
@@ -246,16 +265,66 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
         ) : (
           <div className="w-full">
             <div className="mb-6">
-              <label className="block text-gray-700 font-medium mb-2">
-                Enter Concept or Problem Scenario
-              </label>
-              <textarea
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="e.g., 'Conservation of momentum in elastic collisions' or 'Word problems about percentage'"
-                value={concept}
-                onChange={(e) => setConcept(e.target.value)}
-              ></textarea>
+              <div className="flex items-center mb-2">
+                <label className="block text-gray-700 font-medium">
+                  Voice your concept or problem scenario
+                </label>
+              </div>
+              
+              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-md">
+                <button
+                  onClick={toggleRecording}
+                  className={`relative w-16 h-16 rounded-full flex items-center justify-center ${
+                    isRecording ? 'bg-red-500' : 'bg-blue-500'
+                  } text-white hover:opacity-90 transition-all duration-200`}
+                  type="button"
+                >
+                  {isRecording ? (
+                    <span className="animate-pulse">Stop</span>
+                  ) : (
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-8 w-8" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" 
+                      />
+                    </svg>
+                  )}
+                </button>
+                
+                {/* Voice visualization animation */}
+                {isRecording && (
+                  <div className="flex items-center justify-center mt-4 space-x-1 h-8">
+                    {[...Array(8)].map((_, i) => (
+                      <div 
+                        key={i}
+                        className="w-2 bg-blue-500 rounded-full animate-pulse"
+                        style={{
+                          height: `${Math.random() * 24 + 8}px`,
+                          animationDelay: `${i * 0.1}s`
+                        }}
+                      ></div>
+                    ))}
+                  </div>
+                )}
+                
+                {transcription && (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-md w-full">
+                    <p className="text-gray-800">{transcription}</p>
+                  </div>
+                )}
+                
+                <p className="text-sm text-gray-500 mt-4">
+                  {isRecording ? 'Listening...' : 'Click the microphone to start speaking'}
+                </p>
+              </div>
             </div>
             
             <div className="mb-6">
