@@ -28,9 +28,22 @@ const books: Book[] = [
     title: 'Mathematics 101',
     subject: 'Mathematics',
     chapters: [
-      { id: 'math101-ch1', title: 'Chapter 1: Basic Algebra' },
-      { id: 'math101-ch2', title: 'Chapter 2: Linear Equations' },
-      { id: 'math101-ch3', title: 'Chapter 3: Quadratic Equations' }
+      { id: 'math101-ch1', title: 'Chapter 1: Sets' },
+      { id: 'math101-ch2', title: 'Chapter 2: Relations and Functions' },
+      { id: 'math101-ch3', title: 'Chapter 3: Trigonometric Functions' },
+      { id: 'math101-ch4', title: 'Chapter 4: Principle of Mathematical Induction' },
+      { id: 'math101-ch5', title: 'Chapter 5: Complex Numbers and Quadratic Equations' },
+      { id: 'math101-ch6', title: 'Chapter 6: Linear Inequalities' },
+      { id: 'math101-ch7', title: 'Chapter 7: Permutations and Combinations' },
+      { id: 'math101-ch8', title: 'Chapter 8: Binomial Theorem' },
+      { id: 'math101-ch9', title: 'Chapter 9: Sequences and Series' },
+      { id: 'math101-ch10', title: 'Chapter 10: Straight Lines' },
+      { id: 'math101-ch11', title: 'Chapter 11: Conic Sections' },
+      { id: 'math101-ch12', title: 'Chapter 12: Introduction to Three-Dimensional Geometry' },
+      { id: 'math101-ch13', title: 'Chapter 13: Limits and Derivatives' },
+      { id: 'math101-ch14', title: 'Chapter 14: Mathematical Reasoning' },
+      { id: 'math101-ch15', title: 'Chapter 15: Statistics' },
+      { id: 'math101-ch16', title: 'Chapter 16: Probability' }
     ]
   },
   {
