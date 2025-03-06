@@ -174,7 +174,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
             }`}
             onClick={() => setSelectedTab('ai')}
           >
-            AI Generated
+            AI Cuarated Questions
           </button>
         </div>
       </div>
@@ -385,7 +385,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
               </div>
             ) : questions.length > 0 ? (
               <div className="space-y-4">
-                <h3 className="font-medium">AI Generated Questions</h3>
+                <h3 className="font-medium">Relevant Questions</h3>
                 {questions.map((question) => (
                   <button
                     key={question.id}
