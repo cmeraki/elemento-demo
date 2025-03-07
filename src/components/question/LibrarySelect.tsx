@@ -406,10 +406,10 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                     text: "One Indian and four American men and their wives are to be seated randomly around a circular table. Then the conditional probability that the Indian man is seated adjacent to his wife given that each American man is seated adjacent to his wife is",
                     difficulty: "hard",
                     options: [
-                      { id: 'A', text: '2,598,960', isCorrect: true },
-                      { id: 'B', text: '311,875', isCorrect: false },
-                      { id: 'C', text: '5,200,300', isCorrect: false },
-                      { id: 'D', text: '1,326,649', isCorrect: false },
+                      { id: 'A', text: '2/5', isCorrect: true },
+                      { id: 'B', text: '4/5', isCorrect: false },
+                      { id: 'C', text: '5/6', isCorrect: false },
+                      { id: 'D', text: '1/6', isCorrect: false },
                     ],
                     subject: "Mathematics",
                     chapter: "Combinations"
