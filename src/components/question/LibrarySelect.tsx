@@ -163,7 +163,7 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
       setIsRecording(false);
       // Simulate receiving a transcription after a delay
       setTimeout(() => {
-        const exampleTranscription = "Conservation of momentum in collisions";
+        const exampleTranscription = "Permutations and combinations combined with probability";
         setTranscription(exampleTranscription);
         setConcept(exampleTranscription);
       }, 1500);
@@ -370,21 +370,111 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
             ) : questions.length > 0 ? (
               <div className="space-y-4">
                 <h3 className="font-medium">Relevant Questions</h3>
-                {questions.map((question) => (
-                  <button
-                    key={question.id}
-                    className="block w-full text-left p-3 border rounded-md hover:bg-gray-50"
-                    onClick={() => onQuestionSelected(question)}
-                    type="button" // ADDED: Explicit button type
-                  >
-                    <p className="font-medium">{question.text}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Difficulty: {question.difficulty} | Options: {question.options?.length || 0}
-                    </p>
-                  </button>
-                ))}
+                
+                {/* Question 1 */}
+                <button
+                  key="question-1"
+                  className="block w-full text-left p-3 border rounded-md hover:bg-gray-50"
+                  onClick={() => onQuestionSelected({
+                    id: "question-1",
+                    text: "A fair coin is tossed five times. What is the conditional probability of obtaining exactly three heads, given that the first toss resulted in a head?",
+                    difficulty: "medium",
+                    options: [
+                      { id: 'A', text: '1/6', isCorrect: true },
+                      { id: 'B', text: '1/12', isCorrect: false },
+                      { id: 'C', text: '1/8', isCorrect: false },
+                      { id: 'D', text: '1/4', isCorrect: false },
+                    ],
+                    subject: "Mathematics",
+                    chapter: "Probability"
+                  })}
+                  type="button"
+                >
+                  <p className="font-medium">A fair coin is tossed five times. What is the conditional probability of obtaining exactly three heads, given that the first toss resulted in a head?
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Difficulty: medium | Options: 4
+                  </p>
+                </button>
+                
+                {/* Question 2 */}
+                <button
+                  key="question-2"
+                  className="block w-full text-left p-3 border rounded-md hover:bg-gray-50"
+                  onClick={() => onQuestionSelected({
+                    id: "question-2",
+                    text: "One Indian and four American men and their wives are to be seated randomly around a circular table. Then the conditional probability that the Indian man is seated adjacent to his wife given that each American man is seated adjacent to his wife is",
+                    difficulty: "hard",
+                    options: [
+                      { id: 'A', text: '2,598,960', isCorrect: true },
+                      { id: 'B', text: '311,875', isCorrect: false },
+                      { id: 'C', text: '5,200,300', isCorrect: false },
+                      { id: 'D', text: '1,326,649', isCorrect: false },
+                    ],
+                    subject: "Mathematics",
+                    chapter: "Combinations"
+                  })}
+                  type="button"
+                >
+                  <p className="font-medium">One Indian and four American men and their wives are to be seated randomly around a circular table. Then the conditional probability that the Indian man is seated adjacent to his wife given that each American man is seated adjacent to his wife is</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Difficulty: hard | Options: 4
+                  </p>
+                </button>
+                
+                {/* Question 3 */}
+                <button
+                  key="question-3"
+                  className="block w-full text-left p-3 border rounded-md hover:bg-gray-50"
+                  onClick={() => onQuestionSelected({
+                    id: "question-3",
+                    text: "A jar contains 8 red, 7 green, and 5 blue marbles. Two marbles are drawn sequentially without replacement. What is the probability that both marbles drawn are red, given that at least one marble drawn is red?",
+                    difficulty: "easy",
+                    options: [
+                      { id: 'A', text: '3', isCorrect: false },
+                      { id: 'B', text: '6', isCorrect: true },
+                      { id: 'C', text: '9', isCorrect: false },
+                      { id: 'D', text: '27', isCorrect: false },
+                    ],
+                    subject: "Mathematics",
+                    chapter: "Permutations"
+                  })}
+                  type="button"
+                >
+                  <p className="font-medium">A jar contains 8 red, 7 green, and 5 blue marbles. Two marbles are drawn sequentially without replacement. What is the probability that both marbles drawn are red, given that at least one marble drawn is red?</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Difficulty: easy | Options: 4
+                  </p>
+                </button>
+                
+                {/* Question 4 */}
+                <button
+                  key="question-4"
+                  className="block w-full text-left p-3 border rounded-md hover:bg-gray-50"
+                  onClick={() => onQuestionSelected({
+                    id: "question-4",
+                    text: "What is the probability of drawing an ace from a standard deck of cards?",
+                    difficulty: "medium",
+                    options: [
+                      { id: 'A', text: '1/13', isCorrect: true },
+                      { id: 'B', text: '1/4', isCorrect: false },
+                      { id: 'C', text: '4/52', isCorrect: false },
+                      { id: 'D', text: '1/26', isCorrect: false },
+                    ],
+                    subject: "Mathematics",
+                    chapter: "Probability"
+                  })}
+                  type="button"
+                >
+                  <p className="font-medium">What is the probability of drawing an ace from a standard deck of cards?</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Difficulty: medium | Options: 4
+                  </p>
+                </button>
               </div>
-            ) : null}
+            ) : (
+              <p className="text-gray-500">No questions available. Try asking for a different concept.</p>
+            )}
           </div>
         )}
       </div>
