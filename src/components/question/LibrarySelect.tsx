@@ -1,5 +1,5 @@
 // src/components/question/LibrarySelect.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Question, GetQuestionsParams } from '../../types';
 
 // Correct import path for the getQuestions function 
@@ -100,47 +100,67 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
   const [concept, setConcept] = useState('');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // ADDED: Error state for error handling
+  const [error, setError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState('');
   
+  // Track animation states for elegant transitions
+  const [booksVisible, setBooksVisible] = useState(true);
+  const [chaptersVisible, setChaptersVisible] = useState(false);
+  const [questionsVisible, setQuestionsVisible] = useState(false);
+  
   const handleBookSelect = (bookId: string) => {
-    setSelectedBook(bookId);
-    setSelectedChapter(null);
-    setQuestions([]);
-    setError(null); // Clear any previous errors
+    if (selectedBook === bookId) return;
+    
+    // Animate transitions
+    setChaptersVisible(false);
+    setQuestionsVisible(false);
+    
+    setTimeout(() => {
+      setSelectedBook(bookId);
+      setSelectedChapter(null);
+      setQuestions([]);
+      setError(null);
+      setChaptersVisible(true);
+    }, 300);
   };
   
   const handleChapterSelect = async (chapterId: string) => {
-    setSelectedChapter(chapterId);
-    setIsLoading(true);
-    setError(null); // Clear any previous errors
+    if (selectedChapter === chapterId) return;
     
-    try {
-      // In a real app, fetch questions from API or file
-      const chapterQuestions = await fetchQuestions({
-        chapterId,
-        count: 5
-      });
+    // Animate transition
+    setQuestionsVisible(false);
+    
+    setTimeout(async () => {
+      setSelectedChapter(chapterId);
+      setIsLoading(true);
+      setError(null);
       
-      setQuestions(chapterQuestions);
-    } catch (error) {
-      console.error('Error fetching questions:', error);
-      setError('Failed to load questions. Please try again.'); // Set error message
-      setQuestions([]); // Clear questions on error
-    } finally {
-      setIsLoading(false);
-    }
+      try {
+        const chapterQuestions = await fetchQuestions({
+          chapterId,
+          count: 5
+        });
+        
+        setQuestions(chapterQuestions);
+      } catch (error) {
+        console.error('Error fetching questions:', error);
+        setError('Failed to load questions. Please try again.');
+        setQuestions([]);
+      } finally {
+        setIsLoading(false);
+        setQuestionsVisible(true);
+      }
+    }, 300);
   };
   
   const handleAIFetch = async () => {
     if (!concept) return;
     
     setIsLoading(true);
-    setError(null); // Clear any previous errors
+    setError(null);
     
     try {
-      // In a real app, fetch questions from AI API
       const aiQuestions = await fetchQuestions({
         concept,
         difficulty,
@@ -150,8 +170,8 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
       setQuestions(aiQuestions);
     } catch (error) {
       console.error('Error fetching AI questions:', error);
-      setError('Failed to generate questions. Please try again.'); // Set error message
-      setQuestions([]); // Clear questions on error
+      setError('Failed to generate questions. Please try again.');
+      setQuestions([]);
     } finally {
       setIsLoading(false);
     }
@@ -173,6 +193,15 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
       setTranscription('');
     }
   };
+
+  // Effect to manage visibility when switching tabs
+  useEffect(() => {
+    if (selectedTab === 'textbook') {
+      setBooksVisible(true);
+      setChaptersVisible(!!selectedBook);
+      setQuestionsVisible(!!selectedChapter && questions.length > 0);
+    }
+  }, [selectedTab, selectedBook, selectedChapter, questions.length]);
   
   // Get the selected book safely
   const selectedBookData = selectedBook ? books.find(book => book.id === selectedBook) : null;
@@ -182,112 +211,202 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
       <div className="mb-6">
         <div className="flex border-b border-gray-200">
           <button
-            className={`px-4 py-2 font-medium ${
+            className={`px-4 py-2 font-medium transition-colors duration-200 relative ${
               selectedTab === 'textbook' 
-                ? 'text-blue-600 border-b-2 border-blue-600' 
+                ? 'text-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => setSelectedTab('textbook')}
           >
             From Textbook
+            {selectedTab === 'textbook' && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform transition-transform duration-300"></div>
+            )}
           </button>
           <button
-            className={`px-4 py-2 font-medium ${
+            className={`px-4 py-2 font-medium transition-colors duration-200 relative ${
               selectedTab === 'ai' 
-                ? 'text-blue-600 border-b-2 border-blue-600' 
+                ? 'text-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => setSelectedTab('ai')}
           >
-            AI Cuarated Questions
+            AI Curated Questions
+            {selectedTab === 'ai' && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform transition-transform duration-300"></div>
+            )}
           </button>
         </div>
       </div>
       
       {/* Error message display */}
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md animate-fadeIn">
           {error}
         </div>
       )}
       
       <div className="flex-grow flex">
         {selectedTab === 'textbook' ? (
-          <div className="grid grid-cols-12 gap-4 h-full">
-            <div className="col-span-3 border-r pr-4 overflow-y-auto">
-              <h3 className="font-medium mb-2">Select Textbook</h3>
-              <div className="space-y-2">
+          <div className="w-full h-full flex gap-6">
+            {/* Books and Chapters combined panel (Master) */}
+            <div className="w-2/5 bg-white rounded-lg shadow-sm h-full overflow-hidden flex flex-col">
+              <div className="p-4 border-b bg-gray-50">
+                <h3 className="font-medium text-gray-800">Library</h3>
+              </div>
+              <div className="overflow-y-auto flex-grow">
                 {books.map((book) => (
-                  <button
-                    key={book.id}
-                    className={`block w-full text-left px-3 py-2 rounded-md ${
-                      selectedBook === book.id 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'hover:bg-gray-100'
-                    }`}
-                    onClick={() => handleBookSelect(book.id)}
-                  >
-                    {book.title}
-                  </button>
+                  <div key={book.id} className="mb-2">
+                    {/* Book header - always visible */}
+                    <div
+                      className={`cursor-pointer transition-all duration-200 p-3
+                        ${selectedBook === book.id 
+                          ? 'bg-blue-50' 
+                          : 'hover:bg-gray-50'
+                        }`}
+                      onClick={() => handleBookSelect(book.id)}
+                    >
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 mr-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center
+                            ${selectedBook === book.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
+                            {book.title.charAt(0)}
+                          </div>
+                        </div>
+                        <div className="flex-grow">
+                          <h4 className={`font-medium ${selectedBook === book.id ? 'text-blue-700' : 'text-gray-800'}`}>
+                            {book.title}
+                          </h4>
+                          <p className="text-xs text-gray-500">{book.subject}</p>
+                        </div>
+                        <div>
+                          <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 transition-transform ${selectedBook === book.id ? 'transform rotate-90' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Chapters - visible when book is selected */}
+                    {selectedBook === book.id && (
+                      <div className={`ml-4 pl-4 border-l border-gray-200 transition-all duration-300 
+                        ${chaptersVisible ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                        {book.chapters.map((chapter) => (
+                          <div
+                            key={chapter.id}
+                            className={`rounded-md cursor-pointer transition-all duration-200 p-2 my-1
+                              ${selectedChapter === chapter.id 
+                                ? 'bg-blue-50 border-l-4 border-blue-500' 
+                                : 'hover:bg-gray-50 border-l-4 border-transparent'
+                              }`}
+                            onClick={() => handleChapterSelect(chapter.id)}
+                          >
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 mr-3">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs
+                                  ${selectedChapter === chapter.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
+                                  {chapter.title.split(':')[0].replace('Chapter ', '')}
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className={`text-sm ${selectedChapter === chapter.id ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                                  {chapter.title.split(':')[1]?.trim() || chapter.title}
+                                </h4>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
             
-            <div className="col-span-3 border-r pr-4 overflow-y-auto">
-              <h3 className="font-medium mb-2">Select Chapter</h3>
-              {selectedBook ? (
-                <div className="space-y-2">
-                  {/* FIXED: Safe access with optional chaining and nullish coalescing */}
-                  {selectedBookData?.chapters?.map((chapter) => (
-                    <button
-                      key={chapter.id}
-                      className={`block w-full text-left px-3 py-2 rounded-md ${
-                        selectedChapter === chapter.id 
-                          ? 'bg-blue-100 text-blue-700' 
-                          : 'hover:bg-gray-100'
-                      }`}
-                      onClick={() => handleChapterSelect(chapter.id)}
-                    >
-                      {chapter.title}
-                    </button>
-                  )) || (
-                    <p className="text-gray-500 text-sm">No chapters found for this textbook</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm">Please select a textbook first</p>
-              )}
-            </div>
-            
-            <div className="col-span-6 overflow-y-auto">
-              <h3 className="font-medium mb-2">Select Question</h3>
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                </div>
-              ) : questions.length > 0 ? (
-                <div className="space-y-4">
-                  {questions.map((question) => (
-                    <button
-                      key={question.id}
-                      className="block w-full text-left p-3 border rounded-md hover:bg-gray-50"
-                      onClick={() => onQuestionSelected(question)}
-                    >
-                      <p className="font-medium">{question.text}</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Difficulty: {question.difficulty} | Options: {question.options?.length || 0}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              ) : selectedChapter ? (
-                <p className="text-gray-500 text-sm">No questions available for this chapter</p>
-              ) : (
-                <p className="text-gray-500 text-sm">Please select a chapter to view questions</p>
-              )}
+            {/* Questions Panel (Detail) */}
+            <div className="w-3/5 bg-white rounded-lg shadow-sm h-full flex flex-col">
+              <div className="p-4 border-b bg-gray-50 rounded-t-lg flex justify-between items-center">
+                <h3 className="font-medium text-gray-800">
+                  {selectedChapter ? 
+                    `Questions: ${selectedBookData?.chapters.find(c => c.id === selectedChapter)?.title.split(':')[1]?.trim()}` : 
+                    'Select a chapter to view questions'
+                  }
+                </h3>
+                {selectedBookData && selectedChapter && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                    {selectedBookData.title}
+                  </span>
+                )}
+              </div>
+              
+              <div className="overflow-y-auto flex-grow">
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-48">
+                    <div className="flex flex-col items-center">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-2"></div>
+                      <p className="text-gray-500 text-sm">Loading questions...</p>
+                    </div>
+                  </div>
+                ) : questions.length > 0 ? (
+                  <div className="p-4 space-y-3">
+                    {questions.map((question, index) => (
+                      <div
+                        key={question.id}
+                        className="block w-full text-left p-4 border border-gray-100 rounded-md hover:bg-blue-50 hover:border-blue-100 transition-colors duration-200 cursor-pointer"
+                        onClick={() => onQuestionSelected(question)}
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 mr-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-${
+                              question.difficulty === 'easy' ? 'green' : 
+                              question.difficulty === 'medium' ? 'yellow' : 'red'
+                            }-100 text-${
+                              question.difficulty === 'easy' ? 'green' : 
+                              question.difficulty === 'medium' ? 'yellow' : 'red'
+                            }-700 text-xs font-medium`}>
+                              {question.difficulty === 'easy' ? 'E' : 
+                               question.difficulty === 'medium' ? 'M' : 'H'}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-800 mb-1 line-clamp-2">{question.text}</p>
+                            <div className="flex items-center text-xs text-gray-500 mt-2">
+                              <span className="flex items-center mr-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {question.options?.length || 0} options
+                              </span>
+                              <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+                                {question.difficulty}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : selectedChapter ? (
+                  <div className="p-4 flex flex-col items-center justify-center h-48 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p>No questions available for this chapter</p>
+                  </div>
+                ) : (
+                  <div className="p-4 flex flex-col items-center justify-center h-48 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p>Please select a chapter to view questions</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ) : (
+          // AI Tab content (keeping the original implementation)
           <div className="w-full">
             <div className="mb-6">
               <div className="flex items-center mb-2">
@@ -354,10 +473,10 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
             
             <div className="mb-6">
               <button
-                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
                 onClick={handleAIFetch}
                 disabled={!concept || isLoading}
-                type="button" // ADDED: Explicit button type
+                type="button"
               >
                 {isLoading ? 'Loading...' : 'Generate Questions'}
               </button>
@@ -382,7 +501,8 @@ const LibrarySelect = ({ onQuestionSelected }: LibrarySelectProps) => {
                     options: [
                       { id: 'A', text: '1/6', isCorrect: true },
                       { id: 'B', text: '1/12', isCorrect: false },
-                      { id: 'C', text: '1/8', isCorrect: false },
+                      { id: 'C', text: '4/52', isCorrect: false },
+                      { id: 'D', text: '1/26', isCorrect: false },
                       { id: 'D', text: '1/4', isCorrect: false },
                     ],
                     subject: "Mathematics",
