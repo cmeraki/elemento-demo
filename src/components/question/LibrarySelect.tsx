@@ -51,9 +51,21 @@ const books: Book[] = [
     title: 'Physics 101',
     subject: 'Physics',
     chapters: [
-      { id: 'phys101-ch1', title: 'Chapter 1: Mechanics' },
-      { id: 'phys101-ch2', title: 'Chapter 2: Thermodynamics' },
-      { id: 'phys101-ch3', title: 'Chapter 3: Electricity' }
+      { id: 'phys101-ch1', title: 'Chapter 1: Physical World' },
+      { id: 'phys101-ch2', title: 'Chapter 2: Units and Measurements' },
+      { id: 'phys101-ch3', title: 'Chapter 3: Motion in a Straight Line' },
+      { id: 'phys101-ch4', title: 'Chapter 4: Motion in a Plane' },
+      { id: 'phys101-ch5', title: 'Chapter 5: Laws of Motion' },
+      { id: 'phys101-ch6', title: 'Chapter 6: Work, Energy, and Power' },
+      { id: 'phys101-ch7', title: 'Chapter 7: System of Particles & Rotational Motion' },
+      { id: 'phys101-ch8', title: 'Chapter 8: Gravitation' },
+      { id: 'phys101-ch9', title: 'Chapter 9: Mechanical Properties of Solids' },
+      { id: 'phys101-ch10', title: 'Chapter 10: Mechanical Properties of Fluids' },
+      { id: 'phys101-ch11', title: 'Chapter 11: Thermal Properties of Matter' },
+      { id: 'phys101-ch12', title: 'Chapter 12: Thermodynamics' },
+      { id: 'phys101-ch13', title: 'Chapter 13: Kinetic Theory of Gases' },
+      { id: 'phys101-ch14', title: 'Chapter 14: Oscillations' },
+      { id: 'phys101-ch15', title: 'Chapter 15: Waves' }
     ]
   }
 ];
