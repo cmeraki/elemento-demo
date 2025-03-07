@@ -7,7 +7,7 @@ interface AICardProps {
 
 const AICard = ({ children, onClose }: AICardProps) => {
   return (
-    <div className="fixed right-8 bottom-32 max-w-sm bg-white rounded-lg shadow-lg overflow-hidden z-20 border border-gray-200 pointer-events-auto">
+    <div className="fixed right-8 bottom-24 max-w-sm bg-white rounded-lg shadow-lg overflow-hidden z-20 border border-gray-200 pointer-events-auto">
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-2"></div>
       <div className="relative">
         <button

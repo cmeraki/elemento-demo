@@ -1,4 +1,4 @@
-// src/components/ai/Annotation.tsx - Fixed version
+// src/components/ai/Annotation.tsx - Updated version
 import { CanvasStep } from '../../types';
 
 interface AnnotationProps {
@@ -23,9 +23,11 @@ const Annotation = ({ step, canvasStep, isExpanded, onToggleExpand, isWarning = 
     return null;
   }
   
-  // Position the annotation to the right of the step
-  const annotationX = bbox.x + bbox.width + 10;
-  const annotationY = bbox.y + (bbox.height / 2) - 12; // Center vertically
+  // Position the annotation to the right side of the page, not just right of the step
+  // This is the key change - we're using a fixed position from the right edge
+  const annotationX = window.innerWidth - 100
+  ; // 60px from right edge
+  const annotationY = bbox.y + (bbox.height / 2) + 40; // Center vertically relative to step
   
   const annotationStyle: React.CSSProperties = {
     position: 'absolute',
@@ -35,11 +37,11 @@ const Annotation = ({ step, canvasStep, isExpanded, onToggleExpand, isWarning = 
     zIndex: 10, // Ensure it's above the canvas
   };
   
-  // Position error/warning message slightly below the annotation
+  // Position error/warning message slightly to the left of the annotation
   const messageStyle: React.CSSProperties = {
     position: 'absolute',
-    left: `${annotationX}px`,
-    top: `${annotationY + 30}px`,
+    right: '40px', // Position message to the left of the icon
+    top: `${annotationY - 15}px`, // Align top with the annotation
     width: '280px',
     pointerEvents: 'auto', // Make clickable
     zIndex: 11, // Ensure it's above other elements

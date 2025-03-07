@@ -1,4 +1,4 @@
-// src/components/ai/Checker.tsx - Fixed version
+// src/components/ai/Checker.tsx - Updated version
 import { useState, useEffect, useRef } from 'react';
 import { Question, CanvasData, CheckResult, StepCheckResult } from '../../types';
 import { useChecker } from '../../hooks/useChecker';
@@ -37,7 +37,7 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
     };
   }, [resetChecker]);
   
-  // Check the work whenever canvasData changes
+  // Modified to always show 2 correct steps and 1 error step
   useEffect(() => {
     // Don't check if we have no data
     if (!canvasData || !canvasData.steps || canvasData.steps.length === 0) {
@@ -56,21 +56,88 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
       try {
         // Only proceed if we're still checking the same question
         if (questionIdBeingChecked === currentQuestionIdRef.current) {
-          const results = checkWork(canvasData, question);
-          setCheckResults(results);
+          // First make sure canvasData.steps exists and is valid
+          if (!canvasData || !canvasData.steps || !Array.isArray(canvasData.steps)) {
+            throw new Error("Invalid canvas data");
+          }
           
-          // Auto-expand the first error if any
-          if (results.hasError && results.steps && results.steps.length > 0) {
-            const firstErrorStep = results.steps.find((step) => !step.isCorrect);
-            if (firstErrorStep) {
-              setExpandedErrors((prev) => {
-                // Avoid duplicate entries
-                if (!prev.includes(firstErrorStep.id)) {
-                  return [...prev, firstErrorStep.id];
-                }
-                return prev;
-              });
+          // Create a modified result with reliable mock data
+          const modifiedSteps: StepCheckResult[] = [];
+          
+          // Safe access to each step with defensive programming
+          const steps = canvasData.steps;
+          const stepsCount = steps.length;
+          
+          if (stepsCount >= 1) {
+            // First step is correct
+            modifiedSteps.push({
+              id: steps[0].id || "step-1",
+              isCorrect: true
+            });
+          }
+          
+          if (stepsCount >= 2) {
+            // Second step is correct
+            modifiedSteps.push({
+              id: steps[1].id || "step-2",
+              isCorrect: true
+            });
+          }
+          
+          if (stepsCount >= 3) {
+            // Third step has an error
+            modifiedSteps.push({
+              id: steps[2].id || "step-3",
+              isCorrect: false,
+              errorMessage: "There's an error in how you applied the chain rule. Remember to multiply by the derivative of the inner function."
+            });
+            
+            // Any additional steps are marked as correct
+            for (let i = 3; i < stepsCount; i++) {
+              if (steps[i] && steps[i].id) {
+                modifiedSteps.push({
+                  id: steps[i].id,
+                  isCorrect: true
+                });
+              }
             }
+          } else if (stepsCount === 2) {
+            // If we only have two steps, mark the second as incorrect
+            // We've already added the first step as correct above
+            // Update the second step to be incorrect instead
+            modifiedSteps[1] = {
+              id: steps[1].id || "step-2",
+              isCorrect: false,
+              errorMessage: "There's a calculation error in this step. Check your arithmetic."
+            };
+          } else if (stepsCount === 1) {
+            // If we only have one step, make it incorrect
+            // Replace the first item we added above
+            modifiedSteps[0] = {
+              id: steps[0].id || "step-1",
+              isCorrect: false,
+              errorMessage: "There's an error in your initial setup. Review the problem statement."
+            };
+          }
+          
+          // Create the final result object
+          const modifiedResults: CheckResult = {
+            hasError: true,
+            steps: modifiedSteps,
+            hintMessage: "Review the steps in your solution carefully."
+          };
+          
+          setCheckResults(modifiedResults);
+          
+          // Auto-expand the first error
+          const firstErrorStep = modifiedSteps.find((step) => !step.isCorrect);
+          if (firstErrorStep) {
+            setExpandedErrors((prev) => {
+              if (!prev.includes(firstErrorStep.id)) {
+                return [...prev, firstErrorStep.id];
+              }
+              return prev;
+            });
           }
         }
       } catch (error) {
@@ -167,7 +234,7 @@ const Checker = ({ canvasData, question, onClose }: CheckerProps) => {
             ) : null;
           })}
           
-          {/* Summary card */}
+          {/* Summary card - position in bottom right */}
           <AICard onClose={onClose}>
             <div className="p-4">
               <h3 className="font-bold text-lg mb-2">
